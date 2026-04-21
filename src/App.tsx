@@ -23,7 +23,15 @@ import { AppId, AppConfig } from './types';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+let aiInstance: GoogleGenAI | null = null;
+const getAI = () => {
+  if (!aiInstance && GEMINI_API_KEY && GEMINI_API_KEY !== 'undefined') {
+    aiInstance = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  }
+  return aiInstance;
+};
 
 function RefreshingLogo3D({ size = 18, className }: { size?: number, className?: string }) {
   return (
@@ -535,6 +543,11 @@ function AppFormModal({ editApp, onClose, onSave }: { editApp?: AppConfig, onClo
 
   const generateDescription = async () => {
     if (!formData.name || !formData.url) return;
+    const ai = getAI();
+    if (!ai) {
+      console.warn("AI integration skipped: GEMINI_API_KEY is not configured.");
+      return;
+    }
     setGenerating(true);
     try {
       const response = await ai.models.generateContent({
