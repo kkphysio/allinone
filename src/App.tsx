@@ -23,7 +23,19 @@ import { AppId, AppConfig } from './types';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Lazy initialization for Gemini AI
+let aiInstance: any = null;
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY is missing. AI description generation will be disabled.");
+      return null;
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 function RefreshingLogo3D({ size = 18, className }: { size?: number, className?: string }) {
   return (
@@ -70,6 +82,15 @@ function getAppIcon(name: string, size: number = 20) {
   return null;
 }
 
+function getSafeHostname(url: string) {
+  try {
+    const urlToParse = url.startsWith('http') ? url : `https://${url}`;
+    return new URL(urlToParse).hostname;
+  } catch {
+    return 'external_resource';
+  }
+}
+
 export default function App() {
   const [activeAppId, setActiveAppId] = useState<AppId>('home');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -77,7 +98,8 @@ export default function App() {
     const saved = localStorage.getItem('namma_app_kadai_apps') || localStorage.getItem('livesmart_apps');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {
         console.error("Failed to parse apps", e);
       }
@@ -380,7 +402,8 @@ function HomeDashboard({ apps, onLaunch, onAdd, onEdit, onTogglePin }: { apps: A
             </motion.button>
 
             {apps.map(app => {
-              const domainFavicon = `https://www.google.com/s2/favicons?domain=${new URL(app.url).hostname}&sz=64`;
+              const hostname = getSafeHostname(app.url);
+              const domainFavicon = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
               const appIcon = getAppIcon(app.name, 32);
 
               return (
@@ -436,7 +459,7 @@ function HomeDashboard({ apps, onLaunch, onAdd, onEdit, onTogglePin }: { apps: A
                       <h4 className="font-black text-white text-xl tracking-tight truncate mb-0.5">
                         {app.name}
                       </h4>
-                      <p className="text-[9px] text-slate-500 font-mono mb-3 opacity-60">{new URL(app.url).hostname}</p>
+                      <p className="text-[9px] text-slate-500 font-mono mb-3 opacity-60">{hostname}</p>
                       
                       <p className="text-[11px] text-slate-400 leading-snug line-clamp-3 font-medium italic opacity-80 group-hover:opacity-100 italic">
                         "{app.description || 'No description provided.'}"
@@ -535,14 +558,18 @@ function AppFormModal({ editApp, onClose, onSave }: { editApp?: AppConfig, onClo
 
   const generateDescription = async () => {
     if (!formData.name || !formData.url) return;
+    const ai = getAI();
+    if (!ai) return;
+    
     setGenerating(true);
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Generate a professional 1-sentence description for a web application named "${formData.name}". Tone: high-end, clean, concise. Do not use quotes.`,
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const response = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: `Generate a professional 1-sentence description for a web application named "${formData.name}". Tone: high-end, clean, concise. Do not use quotes.` }] }],
       });
-      if (response.text) {
-        setFormData(prev => ({ ...prev, description: response.text.trim() }));
+      const text = response.response.text();
+      if (text) {
+        setFormData(prev => ({ ...prev, description: text.trim() }));
       }
     } catch (err) {
       console.error("AI Generation failed:", err);
