@@ -9,4 +9,5 @@ export interface AppConfig {
   faviconUrl?: string;
   description: string;
   color: string;
+  pinned?: boolean;
 }

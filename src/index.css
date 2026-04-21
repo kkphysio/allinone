@@ -22,18 +22,29 @@
   }
   
   .app-card {
-    @apply bg-slate-800/40 border border-white/10 rounded-xl transition-all duration-200;
+    @apply transition-all duration-300;
   }
   
   .status-dot {
     @apply w-1.5 h-1.5 rounded-full;
   }
-  
-  .dot-active {
-    @apply bg-emerald-500 shadow-[0_0_8px_#10b981];
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
   }
-  
-  .dot-idle {
-    @apply bg-slate-500;
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .translate-z-10 {
+    transform: translateZ(10px);
+  }
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 105% { transform: translateY(0px) rotateX(0deg); }
+    50% { transform: translateY(-5px) rotateX(5deg); }
   }
 }
