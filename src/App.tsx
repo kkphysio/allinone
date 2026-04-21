@@ -23,15 +23,7 @@ import { AppId, AppConfig } from './types';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-let aiInstance: GoogleGenAI | null = null;
-const getAI = () => {
-  if (!aiInstance && GEMINI_API_KEY && GEMINI_API_KEY !== 'undefined') {
-    aiInstance = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-  }
-  return aiInstance;
-};
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 function RefreshingLogo3D({ size = 18, className }: { size?: number, className?: string }) {
   return (
@@ -81,46 +73,57 @@ function getAppIcon(name: string, size: number = 20) {
 export default function App() {
   const [activeAppId, setActiveAppId] = useState<AppId>('home');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [userApps, setUserApps] = useState<AppConfig[]>([
-    {
-      id: '1',
-      name: 'Gemini AI',
-      url: 'https://gemini.google.com',
-      description: 'Google AI companion for enhanced productivity and creative assistance.',
-      color: 'bg-indigo-600',
-      pinned: true
-    },
-    {
-      id: '2',
-      name: 'YouTube',
-      url: 'https://www.youtube.com',
-      description: 'Access the global collection of video content and educational resources.',
-      color: 'bg-rose-600',
-      pinned: true
-    },
-    {
-      id: '3',
-      name: 'ChatGPT',
-      url: 'https://chatgpt.com',
-      description: 'Advanced conversational AI by OpenAI for diverse text-based tasks.',
-      color: 'bg-emerald-600',
-      pinned: true
-    },
-    {
-      id: '4',
-      name: 'Google',
-      url: 'https://www.google.com',
-      description: 'The primary gateway for information retrieval and digital exploration.',
-      color: 'bg-blue-600',
-      pinned: true
+  const [userApps, setUserApps] = useState<AppConfig[]>(() => {
+    const saved = localStorage.getItem('namma_app_kadai_apps') || localStorage.getItem('livesmart_apps');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse apps", e);
+      }
     }
-  ]);
+    
+    // Default apps if none found
+    return [
+      {
+        id: '1',
+        name: 'Habitrac',
+        url: 'https://habitrac.example.com',
+        description: 'Guided meditation and habit tracking for mindfulness and consistency.',
+        color: 'bg-indigo-600',
+        pinned: true
+      },
+      {
+        id: '2',
+        name: 'Yield Bridge',
+        url: 'https://yield-bridge.example.com',
+        description: 'Advanced financial monitoring and smart investment bridge.',
+        color: 'bg-emerald-600',
+        pinned: true
+      },
+      {
+        id: '3',
+        name: 'Timetabel Chart',
+        url: 'https://timeline.example.com',
+        description: 'Optimized scheduling and timetable management interface.',
+        color: 'bg-amber-600',
+        pinned: true
+      },
+      {
+        id: '4',
+        name: 'Retire Wise Tool',
+        url: 'https://retirewise.example.com',
+        description: 'Comprehensive retirement planning and wealth security companion.',
+        color: 'bg-rose-600',
+        pinned: true
+      }
+    ];
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [appToEdit, setAppToEdit] = useState<AppConfig | null>(null);
 
-  // Persistence disabled for public publishing
   useEffect(() => {
-    // localStorage.setItem('namma_app_kadai_apps', JSON.stringify(userApps));
+    localStorage.setItem('namma_app_kadai_apps', JSON.stringify(userApps));
   }, [userApps]);
 
   const addApp = (newApp: Omit<AppConfig, 'id'>) => {
@@ -178,6 +181,11 @@ export default function App() {
           <div className="pt-8">
             <div className="flex items-center justify-between px-2 mb-4">
               {sidebarOpen && <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Your Apps</p>}
+              {sidebarOpen && (
+                <button onClick={() => setShowAddModal(true)} className="p-1 hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-white">
+                  <Plus size={14} />
+                </button>
+              )}
             </div>
             <div className="space-y-1">
               {sortedApps.map(app => {
@@ -222,6 +230,14 @@ export default function App() {
             <div className="text-sm font-bold text-white tracking-widest uppercase opacity-70">
               Namma App Kadai <span className="text-slate-500 font-normal ml-2 lowercase">/ {activeAppId === 'home' ? 'my_applications' : activeApp?.name.toLowerCase()}</span>
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[10px] font-black shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:bg-indigo-500 transition-all uppercase tracking-[0.2em] hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Add App
+            </button>
           </div>
         </header>
 
@@ -349,6 +365,20 @@ function HomeDashboard({ apps, onLaunch, onAdd, onEdit, onTogglePin }: { apps: A
               visible: { transition: { staggerChildren: 0.08 } }
             }}
           >
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, scale: 0.95 },
+                visible: { opacity: 1, scale: 1 }
+              }}
+              onClick={onAdd}
+              className="group border-dashed border-2 border-slate-800 hover:border-indigo-500/50 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all bg-slate-900/20 aspect-[1/1] relative overflow-hidden"
+            >
+              <div className="w-14 h-14 rounded-full border border-slate-800 flex items-center justify-center text-slate-700 group-hover:text-white group-hover:border-indigo-500 group-hover:bg-indigo-600 transition-all">
+                <Plus size={28} />
+              </div>
+              <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Add App</div>
+            </motion.button>
+
             {apps.map(app => {
               const domainFavicon = `https://www.google.com/s2/favicons?domain=${new URL(app.url).hostname}&sz=64`;
               const appIcon = getAppIcon(app.name, 32);
@@ -393,6 +423,12 @@ function HomeDashboard({ apps, onLaunch, onAdd, onEdit, onTogglePin }: { apps: A
                             title={app.pinned ? "Unpin icon" : "Pin icon"}
                           >
                             <Pin size={12} className={cn(app.pinned && "fill-current")} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onEdit(app); }}
+                            className="p-2 bg-white/5 rounded-xl text-slate-500 hover:text-indigo-400 transition-all hover:bg-white/10 border border-white/5"
+                          >
+                            <Settings size={12} className="group-hover:rotate-45 transition-transform" />
                           </button>
                         </div>
                       </div>
@@ -499,11 +535,6 @@ function AppFormModal({ editApp, onClose, onSave }: { editApp?: AppConfig, onClo
 
   const generateDescription = async () => {
     if (!formData.name || !formData.url) return;
-    const ai = getAI();
-    if (!ai) {
-      console.warn("AI integration skipped: GEMINI_API_KEY is not configured.");
-      return;
-    }
     setGenerating(true);
     try {
       const response = await ai.models.generateContent({
