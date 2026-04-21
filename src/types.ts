@@ -10,4 +10,5 @@ export interface AppConfig {
   description: string;
   color: string;
   pinned?: boolean;
+  category: 'tools' | 'productivity' | 'health' | 'finance' | 'other';
 }
