@@ -74,6 +74,15 @@ function getAppIcon(name: string, size: number = 20) {
   return null;
 }
 
+function getSafeHostname(url: string) {
+  try {
+    const u = url.startsWith('http') ? url : `https://${url}`;
+    return new URL(u).hostname;
+  } catch {
+    return url;
+  }
+}
+
 export default function App() {
   const [activeAppId, setActiveAppId] = useState<AppId>('home');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -327,12 +336,13 @@ export default function App() {
                 </motion.button>
 
                 {appsToShow.map(app => {
-                  const domainFavicon = `https://www.google.com/s2/favicons?domain=${new URL(app.url).hostname}&sz=64`;
+                  const hostname = getSafeHostname(app.url);
+                  const domainFavicon = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
                   const appIcon = getAppIcon(app.name, 32);
 
                   return (
                     <motion.div layout key={app.id} className="group relative">
-                      <div className="h-[320px] w-full relative overflow-hidden flex flex-col rounded-[32px] border border-white/5 bg-slate-900/40 backdrop-blur-xl group-hover:border-indigo-500/20 transition-all shadow-xl hover:-translate-y-2 duration-300 cursor-pointer" onClick={() => window.open(app.url, '_blank')}>
+                      <div className="h-[320px] w-full relative overflow-hidden flex flex-col rounded-[32px] border border-white/5 bg-slate-900/40 backdrop-blur-xl group-hover:border-indigo-500/20 transition-all shadow-xl hover:-translate-y-2 duration-300 cursor-pointer" onClick={() => window.open(app.url.startsWith('http') ? app.url : `https://${app.url}`, '_blank')}>
                         {/* Category Badge */}
                         <div className="absolute top-6 left-6 z-30">
                           <div className="flex items-center gap-1.5 px-3 py-1 bg-black/40 backdrop-blur-md rounded-full border border-white/5 text-[8px] font-black uppercase tracking-widest text-slate-400">
@@ -385,7 +395,7 @@ export default function App() {
                              {app.name}
                            </h4>
                            <p className="text-[10px] text-slate-500 font-mono mb-4 flex items-center gap-2">
-                             <Globe size={10} /> {new URL(app.url).hostname}
+                             <Globe size={10} /> {hostname}
                            </p>
                            
                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 font-medium opacity-80 group-hover:opacity-100 italic">
